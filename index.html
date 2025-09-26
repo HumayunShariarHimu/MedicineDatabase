@@ -2,114 +2,114 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
+<title>HacKing</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Medicine Database CSV/XLS Reader</title>
+<meta name="description" content="HacKing - A Project For Learning Hacking to Become King of Cyber World">
+<meta name="author" content="Humayun Shariar Himu">
+<link rel="icon" href="./HacKing.png" type="image/x-icon">
+
 <style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    background: #f7f7f7;
-    color: #333;
-}
-h1 {
-    text-align: center;
-    color: #0a74da;
-}
-#output {
-    margin-top: 20px;
-}
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-bottom: 30px;
-    background: #fff;
-}
-table, th, td {
-    border: 1px solid #ccc;
-}
-th, td {
-    padding: 8px;
-    text-align: left;
-}
-th {
-    background: #0a74da;
-    color: #fff;
-}
+*{margin:0;padding:0;box-sizing:border-box;}
+body,html{font-family:'Courier New', monospace;background:#000;color:#00ff00;overflow-x:hidden;}
+a{color:#00ff00;text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* ----- Preloader ----- */
+#preloader{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:#000;z-index:9999;}
+#preloader img{width:100px;height:100px;border-radius:50%;animation: glowPulse 2s ease-in-out infinite;box-shadow:0 0 20px #00ff00,0 0 50px #00ff88,0 0 80px #00ffcc;}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 20px #00ff00,0 0 40px #00ff88,0 0 80px #00ffcc;}50%{box-shadow:0 0 40px #00ff00,0 0 70px #00ff88,0 0 120px #00ffcc;}}
+
+/* ----- Container ----- */
+.container{display:flex;flex-direction:column;align-items:flex-start;min-height:100vh;padding:20px;}
+h1{font-size:2rem;color:#00ff00;text-shadow:0 0 5px #00ff00,0 0 10px #00ff88;margin-bottom:20px;}
+h1 .rainbow-text{background:linear-gradient(90deg,#00ff00,#00ff88,#00ffcc,#00ffee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:bold;animation: rainbowShift 5s linear infinite;}
+@keyframes rainbowShift{0%{background-position:0%;}100%{background-position:200%;}}
+
+/* ----- Controls ----- */
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:20px;width:100%;max-width:1000px;}
+.controls select,.controls button{flex:1 1 40%;min-width:120px;padding:10px;border:none;border-radius:5px;background:#000;color:#00ff00;box-shadow:0 0 10px #00ff00;font-family:'Courier New', monospace;font-size:1rem;cursor:pointer;transition:all 0.2s ease;}
+.controls select:hover,.controls button:hover{transform:scale(1.05);box-shadow:0 0 20px #00ff00;}
+
+/* ----- Terminal Content ----- */
+#content{background:#000;color:#00ff00;width:100%;max-width:1000px;max-height:70vh;border-radius:5px;padding:20px;overflow:auto;white-space:pre-wrap;box-shadow:0 0 15px #00ff00;font-family:'Courier New', monospace;font-size:1rem;line-height:1.6; border:1px solid #00ff00;}
+#content:hover{box-shadow:0 0 25px #00ff00;}
+#content::-webkit-scrollbar{width:10px;}
+#content::-webkit-scrollbar-thumb{background:#00ff00;border-radius:5px;}
+#content::-webkit-scrollbar-track{background:#111;border-radius:5px;}
+
+/* ----- Responsive ----- */
+@media(max-width:768px){h1{font-size:1.5rem;}.controls select,.controls button{flex:1 1 45%;font-size:0.9rem;min-width:100px;}#content{max-height:55vh;font-size:0.95rem;}}
+@media(max-width:480px){.controls select,.controls button{flex:1 1 100%;min-width:0;}#content{max-height:50vh;font-size:0.9rem;}}
 </style>
 </head>
 <body>
 
-<h1>Medicine Database - CSV/XLS Viewer</h1>
-<button id="loadBtn">Load All CSV/XLS Files</button>
+<div id="preloader"><img src="./HacKing.png" alt="HacKing"></div>
 
-<div id="output"></div>
+<div class="container">
+<center>
+<h1><span class="rainbow-text">HacKing</span></h1>
+<p><span class="rainbow-text">Learning Hacking to Become King of Cyber World</span></p>
+</center>
+<br><br>
+<div class="controls">
+<select id="fileSelect"><option value="">-- Select Hacking Subject --</option></select>
+<button id="prevBtn">⬅ Previous</button>
+<button id="nextBtn">Next ➡</button>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<div id="content">Loading repository content...</div>
+</div>
+
 <script>
-const output = document.getElementById('output');
-const loadBtn = document.getElementById('loadBtn');
+const repos=[
+    {owner:"HumayunShariarHimu", repo:"H4ck3R", folder:""},
+    {owner:"HumayunShariarHimu", repo:"HacKing", folder:"Techniques/"},
+    {owner:"HumayunShariarHimu", repo:"BrainGuru", folder:"Mind_Hacking/"}
+];
 
-// Fixed repo name
-const ownerRepo = "HumayunShariarHimu/MedicineDatabase";
+let files=[], currentIndex=0;
+const fileSelect=document.getElementById('fileSelect');
+const contentDiv=document.getElementById('content');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
 
-// Recursive function to fetch all files
-async function fetchFilesRecursive(path = '') {
-    const apiUrl = `https://api.github.com/repos/${ownerRepo}/contents/${path}`;
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error(`GitHub API Error: ${res.status}`);
-    const items = await res.json();
+function showContent(text){contentDiv.textContent=text;}
 
-    let allFiles = [];
-    for (const item of items) {
-        if (item.type === 'file' && (item.name.endsWith('.csv') || item.name.endsWith('.xls') || item.name.endsWith('.xlsx'))) {
-            allFiles.push(item);
-        } else if (item.type === 'dir') {
-            const subFiles = await fetchFilesRecursive(item.path);
-            allFiles = allFiles.concat(subFiles);
-        }
+async function fetchGitHubFiles(){
+    files=[];
+    for(const r of repos){
+        const url=`https://api.github.com/repos/${r.owner}/${r.repo}/git/trees/main?recursive=1`;
+        try{
+            const res=await fetch(url);
+            const data=await res.json();
+            const repoFiles=data.tree.filter(f=>f.type==="blob" && f.path.startsWith(r.folder)).map(f=>({
+                name:`${r.repo}/${f.path}`,
+                download_url:`https://raw.githubusercontent.com/${r.owner}/${r.repo}/main/${f.path}`,
+                content:null
+            }));
+            files=files.concat(repoFiles);
+        }catch(e){ console.error(`Error fetching ${r.repo}`, e);}
     }
-    return allFiles;
+
+    populateSelect(files);
+    contentDiv.textContent="Fetching file contents...";
+    await Promise.all(files.map(async(f)=>{try{const res=await fetch(f.download_url);f.content=res.ok?await res.text():"❌ Load error";}catch(e){f.content="❌ Load error";}}));
+
+    if(files.length>0){currentIndex=0; fileSelect.value=0; showContent(files[0].content);}
 }
 
-// Load and render files
-async function loadAndRenderFiles() {
-    output.innerHTML = '<p>Loading files...</p>';
-    try {
-        const files = await fetchFilesRecursive();
-        if (files.length === 0) {
-            output.innerHTML = '<p>No CSV/XLS/XLSX files found in this repo.</p>';
-            return;
-        }
-
-        output.innerHTML = ''; // clear message
-        for (const file of files) {
-            const fileRes = await fetch(file.download_url);
-            const arrayBuffer = await fileRes.arrayBuffer();
-            const data = new Uint8Array(arrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array' });
-
-            workbook.SheetNames.forEach(sheetName => {
-                const sheet = workbook.Sheets[sheetName];
-                const html = XLSX.utils.sheet_to_html(sheet);
-
-                const title = document.createElement('h2');
-                title.textContent = `${file.path} - Sheet: ${sheetName}`;
-                output.appendChild(title);
-
-                const div = document.createElement('div');
-                div.innerHTML = html;
-                output.appendChild(div);
-            });
-        }
-    } catch (err) {
-        console.error(err);
-        output.innerHTML = `<p>Error: ${err.message}</p>`;
-    }
+function populateSelect(list){
+    fileSelect.innerHTML='<option value="">-- Select File --</option>';
+    list.forEach((f,i)=>{const opt=document.createElement('option'); opt.value=i; opt.textContent=f.name; fileSelect.appendChild(opt);});
 }
 
-loadBtn.addEventListener('click', () => {
-    loadAndRenderFiles();
-});
+fileSelect.addEventListener('change',()=>{const i=parseInt(fileSelect.value);if(!isNaN(i)){currentIndex=i; showContent(files[i].content);}});
+nextBtn.addEventListener('click',()=>{if(files.length===0)return; currentIndex=(currentIndex+1)%files.length; fileSelect.value=currentIndex; showContent(files[currentIndex].content);});
+prevBtn.addEventListener('click',()=>{if(files.length===0)return; currentIndex=(currentIndex-1+files.length)%files.length; fileSelect.value=currentIndex; showContent(files[currentIndex].content);});
+
+window.addEventListener('load',()=>{setTimeout(()=>{document.getElementById('preloader').style.display='none'; fetchGitHubFiles();},1500);});
 </script>
+
 </body>
 </html>
