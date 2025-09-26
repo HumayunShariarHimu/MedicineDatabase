@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medicine Database CSV/XLS Reader</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #f7f7f7;
+    color: #333;
+}
+h1 {
+    text-align: center;
+    color: #0a74da;
+}
+#output {
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 30px;
+    background: #fff;
+}
+table, th, td {
+    border: 1px solid #ccc;
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background: #0a74da;
+    color: #fff;
+}
+</style>
+</head>
+<body>
+
+<h1>Medicine Database - CSV/XLS Viewer</h1>
+<button id="loadBtn">Load All CSV/XLS Files</button>
+
+<div id="output"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script>
+const output = document.getElementById('output');
+const loadBtn = document.getElementById('loadBtn');
+
+// Fixed repo name
+const ownerRepo = "HumayunShariarHimu/MedicineDatabase";
+
+// Recursive function to fetch all files
+async function fetchFilesRecursive(path = '') {
+    const apiUrl = `https://api.github.com/repos/${ownerRepo}/contents/${path}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`GitHub API Error: ${res.status}`);
+    const items = await res.json();
+
+    let allFiles = [];
+    for (const item of items) {
+        if (item.type === 'file' && (item.name.endsWith('.csv') || item.name.endsWith('.xls') || item.name.endsWith('.xlsx'))) {
+            allFiles.push(item);
+        } else if (item.type === 'dir') {
+            const subFiles = await fetchFilesRecursive(item.path);
+            allFiles = allFiles.concat(subFiles);
+        }
+    }
+    return allFiles;
+}
+
+// Load and render files
+async function loadAndRenderFiles() {
+    output.innerHTML = '<p>Loading files...</p>';
+    try {
+        const files = await fetchFilesRecursive();
+        if (files.length === 0) {
+            output.innerHTML = '<p>No CSV/XLS/XLSX files found in this repo.</p>';
+            return;
+        }
+
+        output.innerHTML = ''; // clear message
+        for (const file of files) {
+            const fileRes = await fetch(file.download_url);
+            const arrayBuffer = await fileRes.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                const html = XLSX.utils.sheet_to_html(sheet);
+
+                const title = document.createElement('h2');
+                title.textContent = `${file.path} - Sheet: ${sheetName}`;
+                output.appendChild(title);
+
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                output.appendChild(div);
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        output.innerHTML = `<p>Error: ${err.message}</p>`;
+    }
+}
+
+loadBtn.addEventListener('click', () => {
+    loadAndRenderFiles();
+});
+</script>
+</body>
+</html>
